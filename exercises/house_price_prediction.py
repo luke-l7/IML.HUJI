@@ -48,20 +48,27 @@ def feature_evaluation(X: pd.DataFrame, y: pd.Series, output_path: str = ".") ->
 
 if __name__ == '__main__':
     np.random.seed(0)
-    # Question 1 - Load and preprocessing of housing prices dataset
-    raise NotImplementedError()
-
-    # Question 2 - Feature evaluation with respect to response
-    raise NotImplementedError()
-
-    # Question 3 - Split samples into training- and testing sets.
-    raise NotImplementedError()
-
-    # Question 4 - Fit model over increasing percentages of the overall training data
-    # For every percentage p in 10%, 11%, ..., 100%, repeat the following 10 times:
-    #   1) Sample p% of the overall training data
-    #   2) Fit linear model (including intercept) over sampled set
-    #   3) Test fitted model over test set
-    #   4) Store average and variance of loss over test set
-    # Then plot average loss as function of training size with error ribbon of size (mean-2*std, mean+2*std)
-    raise NotImplementedError()
+    # # Question 1 - Load and preprocessing of housing prices dataset
+    # raise NotImplementedError()
+    #
+    # # Question 2 - Feature evaluation with respect to response
+    # raise NotImplementedError()
+    #
+    # # Question 3 - Split samples into training- and testing sets.
+    # raise NotImplementedError()
+    #
+    # # Question 4 - Fit model over increasing percentages of the overall training data
+    # # For every percentage p in 10%, 11%, ..., 100%, repeat the following 10 times:
+    # #   1) Sample p% of the overall training data
+    # #   2) Fit linear model (including intercept) over sampled set
+    # #   3) Test fitted model over test set
+    # #   4) Store average and variance of loss over test set
+    # # Then plot average loss as function of training size with error ribbon of size (mean-2*std, mean+2*std)
+    # raise NotImplementedError()
+    linearReg = LinearRegression()
+    samples = np.array([[1],[3],[5]])
+    out = np.array([2,6,10])
+    linearReg.fit(samples,out)
+    print(linearReg.coefs_)
+    samples = np.array([[6],[7],[8]])
+    print(linearReg.predict(samples))
