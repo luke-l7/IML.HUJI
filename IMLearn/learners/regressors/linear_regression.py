@@ -69,7 +69,8 @@ class LinearRegression(BaseEstimator):
         responses : ndarray of shape (n_samples, )
             Predicted responses of given samples
         """
-        return np.array([np.array(x).dot(self.coefs_) for x in X])
+        return X.dot(self.coefs_)
+        # return np.array([np.array(x).dot(self.coefs_) for x in X])
 
     def _loss(self, X: np.ndarray, y: np.ndarray) -> float:
         """
@@ -88,7 +89,12 @@ class LinearRegression(BaseEstimator):
         loss : float
             Performance under MSE loss function
         """
-        return numpy.linalg.norm((X.dot(self.coefs_) - y)**2)
+        from IMLearn.metrics.loss_functions import mean_square_error
+        # return numpy.linalg.norm((X.dot(self.coefs_) - y)**2)
+        return mean_square_error(y,self.predict(X))
+        # print((self.predict(X) - y).shape)
+        # print(X.shape)
+        # return numpy.linalg.norm(self.predict(X) - y)**2
 
 
 
