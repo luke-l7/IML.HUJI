@@ -39,10 +39,10 @@ def split_train_test(X: pd.DataFrame, y: pd.Series, train_proportion: float = .7
     X : pd.DataFrame = pd.DataFrame.join(X,y)
     train_data = X.sample(n=no_of_train_rows, axis=0)
     test_data = X.loc[X.index.difference(train_data.index), ]
-    train_y = train_data['price']
-    test_y = test_data['price']
-    train_data.drop(columns=['price'],inplace=True)
-    test_data.drop(columns=['price'],inplace=True)
+    train_y = train_data[y.name]
+    test_y = test_data[y.name]
+    train_data.drop(columns=y.name,inplace=True)
+    test_data.drop(columns=y.name,inplace=True)
     # print(train_data.shape)
     # print(test_data.shape)
     # print(train_y.shape)

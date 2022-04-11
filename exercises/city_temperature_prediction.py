@@ -1,7 +1,5 @@
 import matplotlib.pyplot as plt
 import numpy
-
-import IMLearn.learners.regressors.linear_regression
 from IMLearn.learners.regressors import PolynomialFitting
 from IMLearn.utils import split_train_test
 
@@ -38,12 +36,14 @@ if __name__ == '__main__':
     np.random.seed(0)
     # Question 1 - Load and preprocessing of city temperature dataset
     df = load_data("..\datasets\City_Temperature.csv")
+
     # Question 2 - Exploring data for specific country
 
     # select rows that are specified for Israel
-    israel_data = df.loc[df['Country'] == "Israel"]
+    israel_data : pd.DataFrame = df.loc[df['Country'] == "Israel"]
         # define index column
     israel_data.set_index('DayOfYear', inplace = True)
+
         # group data by product and display sales as line chart
     israel_data.groupby('Year')['Temp'].plot.line(legend=True,title="Temperature by the Day of year, plotted by year",style='o', markeredgecolor='white')
 
@@ -61,10 +61,30 @@ if __name__ == '__main__':
     px.line(grouped,x="Month",y="mean",color=grouped["City"].astype(str),title="mean for each country",error_y="std").show()
 
     # Question 4 - Fitting model for different values of `k`
+    israel_y = israel_data['Temp']
+    israel_data.drop(columns=['Temp'],inplace=True)
+    degrees = numpy.arange(1,11,dtype=int)
+    losses = []
+    train_d,train_y,test_d,test_y = split_train_test(israel_data,israel_y)
+    for k in degrees:
+        poly : PolynomialFitting = PolynomialFitting(k)
+        poly.fit(np.array(train_d['DayOfYear']),np.array(train_y))
+        losses.append(round(poly.loss(np.array(test_d['DayOfYear']),np.array(test_y)),2))
+    print(losses)
+    px.bar(pd.DataFrame.join(pd.DataFrame(degrees,columns=['degrees']),pd.DataFrame(losses,columns=['losses'])),x='degrees',y='losses',color='degrees').show()
 
     # Question 5 - Evaluating fitted model on different countries
 
-    # poly : PolynomialFitting = PolynomialFitting(2)
-    # poly.fit(np.array([1,2,3]).reshape(3,1),np.array([1,4,9]).reshape(3,))
-    # print(poly.coefs_)
+    poly : PolynomialFitting = PolynomialFitting(5)
+    poly.fit(np.array(israel_data['DayOfYear']),np.array(israel_data['Temp']))
+    losses = []
+    countries = df["Country"].unique()
+    for country in countries:
+        country_data = df.loc[df['Country'] == country]
+        country_y = country_data['Temp']
+        losses.append(poly.loss(country_data['DayOfYear'],country_y))
+    print(losses)
+    px.bar(x=countries,y=losses,color=countries,title="Error value predicted for other countries with Israel's model").show()
+
+
 

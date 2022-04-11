@@ -33,10 +33,6 @@ class PolynomialFitting(LinearRegression):
         y : ndarray of shape (n_samples, )
             Responses of input data to fit to
         """
-        for sample in X:
-            print(sample.shape)
-            print(np.linalg.pinv(self.__transform(sample)).shape)
-            print(np.linalg.pinv(self.__transform(sample))@y)
         super(PolynomialFitting, self)._fit(self.__transform(X),y)
 
     def _predict(self, X: np.ndarray) -> np.ndarray:
@@ -53,7 +49,7 @@ class PolynomialFitting(LinearRegression):
         responses : ndarray of shape (n_samples, )
             Predicted responses of given samples
         """
-        return super(PolynomialFitting, self)._predict(X)
+        return super(PolynomialFitting, self)._predict(self.__transform(X))
 
     def _loss(self, X: np.ndarray, y: np.ndarray) -> float:
         """
@@ -88,5 +84,4 @@ class PolynomialFitting(LinearRegression):
             Vandermonde matrix of given samples up to degree k
         """
         vander = np.vander(X,self._k+1,increasing=True)
-        print(vander.shape)
         return vander
