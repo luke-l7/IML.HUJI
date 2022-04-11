@@ -1,11 +1,8 @@
-from scipy import stats
+import pandas
 
 from IMLearn.utils import split_train_test
 from IMLearn.learners.regressors import LinearRegression
-from IMLearn.metrics import loss_functions
-import sys
 
-sys.path.append("../")
 from typing import NoReturn
 import numpy as np
 import pandas as pd
@@ -13,9 +10,7 @@ import plotly.graph_objects as go
 import plotly.express as px
 import plotly.io as pio
 
-pio.kaleido.scope.default_format = "simple_white"
-
-HOUSE_PRICES_PATH = "../datasets/house_prices.csv"
+pio.templates.default = "simple_white"
 
 
 def load_data(filename: str):
@@ -31,30 +26,35 @@ def load_data(filename: str):
     Design matrix and response vector (prices) - either as a single
     DataFrame or a Tuple[DataFrame, Series]
     """
+    unwanted_features = ["id",
+                         "date",
+                         "yr_renovated",
+                         "lat",
+                         "long"
+                         ]
+    data_frame: pd.DataFrame = pd.read_csv(filename)
 
-    panda_file = pd.read_csv(filename)
-
-    # drop rows with nan
-    panda_file = panda_file.dropna()
-
-    # drop duplicated rows
-    panda_file = panda_file.drop_duplicates()
-
-    # drop row if the price is negative
-    panda_file = panda_file.drop(panda_file[panda_file.price <= 0].index)
-
-    panda_file = panda_file.drop(['id', 'date', 'long','lat'], axis=1)
-
-
-
-    panda_file = pd.get_dummies(panda_file, prefix='zipcode_', columns=['zipcode'])
-
-
-
-
-    y = pd.Series(panda_file['price'])
-    X = panda_file.drop('price', axis=1)
-    return X, y
+    # remove unwanted features
+    for feature in unwanted_features:
+        data_frame.drop(feature, axis=1, inplace=True)
+    # adjust faulty data
+    dropped_rows = []
+    for index, row in data_frame.iterrows():
+        if True in [x <= 0 for x in row]:
+            dropped_rows.append(index)
+    data_frame.drop(dropped_rows, axis=0)
+    data_frame = data_frame.dropna()
+    data_frame = data_frame.drop_duplicates()
+    # other pre-processing
+    data_frame['yr_built'] = data_frame['yr_built'].map(lambda x: 2022 - x)
+    # hot encode zipcodes
+    encoded_data = pd.get_dummies(data_frame.zipcode, prefix='zipcode')
+    data_frame = pd.concat([data_frame, encoded_data], axis=1)
+    # remove zipcode column, and price column
+    data_frame.drop(['zipcode'], axis=1, inplace=True)
+    Y: pd.Series = data_frame['price']
+    data_frame.drop(['price'], axis=1, inplace=True)
+    return data_frame, Y
 
 
 def feature_evaluation(X: pd.DataFrame, y: pd.Series, output_path: str = ".") -> NoReturn:
@@ -74,41 +74,47 @@ def feature_evaluation(X: pd.DataFrame, y: pd.Series, output_path: str = ".") ->
     output_path: str (default ".")
         Path to folder in which plots are saved
     """
-    y_std = np.std(y, axis=0)
+    import matplotlib.pyplot as plt
+    # import seaborn as sns
 
-    for feature in X.keys():
-        std = np.std(X[feature], ddof=1) * y_std
-        cov = np.cov(y, X[feature], ddof=1)
-        f_pearson_correlation = cov[0, 1] / std
-        print(feature, f_pearson_correlation)
-        fig = go.Figure([go.Scatter(y=y.values, x=X[feature].values,
-                                    mode="markers", marker=dict(color="black", opacity=.7), showlegend=False)],
-                        layout=go.Layout(title=f'scatter between {feature} and response - Pearson Correlation: {f_pearson_correlation} ',
-                                         xaxis={"title": f"x - {feature}"},
-                                         yaxis={"title": "y - Response"},
-                                         height=400))
-        # fig.show()
-        fig.write_image(f"{output_path}/pearson.correlation.{feature}.png")
+    # remove categorical data
+    orig_df = X.copy(deep=True)
+    orig_df.drop(columns=orig_df.columns[14:], inplace=True)
 
-def test_func():
+    # join with solution
+    orig_df = pd.DataFrame.join(pd.DataFrame(y), orig_df)
+    cov_array = orig_df.cov()
+    features_evaluation_cov : np.array = cov_array['price'][:15] # take only numerical data
+    response_var = Y.std()
+    i = 0
+    for (feature_name,feature_data) in orig_df.iteritems():
+        if i == 15:
+            break
+        features_evaluation_cov[i] /= (feature_data.std() * response_var)
+        i += 1
+    for (feature_name,feature_data) in orig_df.iteritems():
+        orig_df.hist(column=feature_name, bins=50)
+        plt.savefig(output_path + "\\" + feature_name)
 
-    pass
+    print(features_evaluation_cov)
 
 
-if __name__ == '__main__':
+if __name__ == '__main__' :
+    from IMLearn.metrics.loss_functions import mean_square_error
+    y_true = np.array([279000, 432000, 326000, 333000, 437400, 555950])
+    y_pred = np.array([199000.37562541, 452589.25533196, 345267.48129011, 345856.57131275, 563867.1347574, 395102.94362135])
+    print(mean_square_error(y_true, y_pred))
+
+
     np.random.seed(0)
-    test_func()
     # Question 1 - Load and preprocessing of housing prices dataset
-    X, y = load_data(HOUSE_PRICES_PATH)
+    df, Y = load_data("..\datasets\house_prices.csv")
 
     # Question 2 - Feature evaluation with respect to response
-    feature_evaluation(X, y)
+    print(feature_evaluation(df, Y))
 
     # Question 3 - Split samples into training- and testing sets.
-    train_X, train_y, test_X, test_y = split_train_test(X, y)
-
-
-
+    train_d,train_y,test_d,test_y = split_train_test(df,Y)
 
     # Question 4 - Fit model over increasing percentages of the overall training data
     # For every percentage p in 10%, 11%, ..., 100%, repeat the following 10 times:
@@ -117,38 +123,41 @@ if __name__ == '__main__':
     #   3) Test fitted model over test set
     #   4) Store average and variance of loss over test set
     # Then plot average loss as function of training size with error ribbon of size (mean-2*std, mean+2*std)
+    linear_model = LinearRegression()
+    var_mean_for_percentage = []
+    percents = np.linspace(10,100,91)
+    mean_arr = []
+    var_arr = []
 
-    linear_reg = LinearRegression()
-    loss_vec = []
-    var_vec = []
-    all_p = np.linspace(10, 100, 100).astype(int)
-    for p in all_p:
-        p_loss=[]
+    for percentage in percents:
+        loss_arr = []
         for i in range(10):
-            p_samples = pd.concat([train_X, train_y], ignore_index=True, axis=1).sample(frac=(p/100))
-            linear_reg._fit(np.array(p_samples.iloc[:,:-1]),np.array(p_samples.iloc[:,-1]))
-            p_loss.append(linear_reg._loss(np.array(test_X),(np.array(test_y))))
-        loss_vec.append(np.mean(p_loss,axis=0))
-        var_vec.append(np.std(p_loss,axis=0))
-        print('loss:',loss_vec[-1],'std:',var_vec[-1])
-    loss_vec = np.array(loss_vec)
-    var_vec = np.array(var_vec)
-    go.Figure([go.Scatter(x=all_p, y=loss_vec, mode="markers+lines",
-                          name="Mean Prediction",
-                          marker=dict(color="green", opacity=.7)),
-                          go.Scatter(x=all_p, y=loss_vec-2*var_vec, fill=None,
-                                     mode="lines", line=dict(color="lightgrey"),
-                                     showlegend=False),
-                          go.Scatter(x=all_p, y=loss_vec+2*var_vec, fill='tonexty',
-                                     mode="lines", line=dict(color="lightgrey"),
-                                     showlegend=False)],
-                    layout=go.Layout(title="Average Loss As Function Of Training Size",
-                                     xaxis_title='p - Training Size',
-                                     yaxis_title='Average Loss')).show()
+            train_d,train_y,test_d,test_y = split_train_test(df,Y,percentage/100)
+            linear_model.fit(np.array(train_d),np.array(train_y))
+            loss = linear_model.loss(np.array(test_d).reshape(test_d.shape),np.array(test_y).reshape(test_y.shape))
+            loss_arr.append(loss)
+        series = pd.Series(loss_arr)
+        mean_arr.append(series.mean())
+        var_arr.append(series.std())
+    mean_arr = mean_arr[::-1]
+    var_arr = var_arr[::-1]
+    mean_arr = np.array(mean_arr)
+    var_arr = np.array(var_arr)
+
+    fig = go.Figure(
+        (go.Scatter(x=percents, y=mean_arr, mode="markers+lines", name="mean loss prediction", line=dict(dash="dash"),
+                    marker=dict(color="green", opacity=.7), ),
+         go.Scatter(x=percents, y=mean_arr - (2 * var_arr), fill=None, mode="lines", line=dict(color="lightgrey"),
+                    showlegend=False),
+         go.Scatter(x=percents, y=mean_arr + (2 * var_arr), fill='tonexty', mode="lines", line=dict(color="lightgrey"),
+                    showlegend=False),))
+    st = "MSE and STDDS of losses over house prices, as a function of train data percentage"
+    fig.update_layout(title=dict({'text': st}))
+    fig.show()
 
 
-    # print("mean:",all_mean)
-    # print("std:", all_var)
+
+
 
 
 
