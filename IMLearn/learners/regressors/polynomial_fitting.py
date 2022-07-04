@@ -83,5 +83,5 @@ class PolynomialFitting(LinearRegression):
         transformed: ndarray of shape (n_samples, k+1)
             Vandermonde matrix of given samples up to degree k
         """
-        vander = np.vander(X,self._k+1,increasing=True)
+        vander = np.vander(X,self._k + 1,increasing=True)
         return vander

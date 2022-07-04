@@ -59,7 +59,11 @@ class RidgeRegression(BaseEstimator):
         -----
         Fits model with or without an intercept depending on value of `self.include_intercept_`
         """
-        raise NotImplementedError()
+        ident_degree = X.shape[1]
+        I = np.identity(ident_degree)
+        I[0][0] = 0
+        w_hat = np.linalg.inv(X.T @ X+self.lam_ * I)@X.T@y
+        self.coefs_ = w_hat
 
     def _predict(self, X: np.ndarray) -> np.ndarray:
         """
@@ -75,7 +79,7 @@ class RidgeRegression(BaseEstimator):
         responses : ndarray of shape (n_samples, )
             Predicted responses of given samples
         """
-        raise NotImplementedError()
+        return X.dot(self.coefs_)
 
     def _loss(self, X: np.ndarray, y: np.ndarray) -> float:
         """
@@ -94,4 +98,5 @@ class RidgeRegression(BaseEstimator):
         loss : float
             Performance under MSE loss function
         """
-        raise NotImplementedError()
+        from ...metrics.loss_functions import mean_square_error
+        return mean_square_error(self.predict(X), y)

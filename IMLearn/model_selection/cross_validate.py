@@ -2,6 +2,8 @@ from __future__ import annotations
 from copy import deepcopy
 from typing import Tuple, Callable
 import numpy as np
+import pandas as pd
+
 from IMLearn import BaseEstimator
 
 
@@ -37,4 +39,43 @@ def cross_validate(estimator: BaseEstimator, X: np.ndarray, y: np.ndarray,
     validation_score: float
         Average validation score over folds
     """
-    raise NotImplementedError()
+    # train_scores = []
+    # validation_scores = []
+    # data_folds = np.array_split(X, cv)
+    # predictions_folds = np.array_split(y,cv)
+    # for fold_index in range(len(data_folds)):
+    #     test_fold = fold_index
+    #     training_X = X.copy()
+    #     training_y = y.copy()
+    #     c = 0
+    #     for sample in training_X:
+    #         if sample in data_folds[test_fold]:
+    #             c += 1
+    #     print(c)
+    #     print(len(data_folds[test_fold]))
+    #     assert c == len(data_folds[test_fold])
+    #
+    #     c = 0
+    #     for prediction in training_y:
+    #         if prediction in predictions_folds[test_fold]:
+    #             c += 1
+    #     print(c)
+    #     assert c == len(predictions_folds[test_fold])
+    #     training_X = training_X[~training_X.isin(data_folds[test_fold])]
+    #     training_y = training_y[~training_y.isin(predictions_folds[test_fold])]
+    #     train_scores.append(scoring(estimator.predict(training_X),training_y))
+    #     validation_scores.append(scoring(estimator.predict(data_folds[test_fold]),predictions_folds[test_fold]))
+    # return np.average(train_scores), np.average(validation_scores)
+    training_err = []
+    validation_err = []
+    folds = np.remainder(np.arange(X.shape[0]), cv)
+
+    for k in range(cv):
+        train_data = X[folds != k]
+        train_predictions = y[folds != k]
+        validation_data = X[folds == k]
+        validation_predictions = y[folds == k]
+        estimator.fit(train_data, train_predictions)
+        training_err.append(scoring(estimator.predict(train_data), train_predictions))
+        validation_err.append(scoring(estimator.predict(validation_data), validation_predictions))
+    return np.average(training_err), np.average(validation_err)
